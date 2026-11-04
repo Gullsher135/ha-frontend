@@ -1,0 +1,14 @@
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider, useAuth } from "./auth.jsx"; import { ToastProvider, Loading } from "./components/ui.jsx";
+import Layout from "./components/Layout.jsx"; import Login from "./pages/Login.jsx"; import Home from "./pages/Home.jsx";
+import Parties from "./pages/Parties.jsx"; import Ledger from "./pages/Ledger.jsx"; import Items from "./pages/Items.jsx"; import Rates from "./pages/Rates.jsx"; import Payments from "./pages/Payments.jsx"; import Purchases from "./pages/Purchases.jsx"; import More from "./pages/More.jsx"; import Invoices from "./pages/Invoices.jsx"; import NewInvoice from "./pages/NewInvoice.jsx"; import InvoiceView from "./pages/InvoiceView.jsx"; import Settings from "./pages/Settings.jsx"; import Accounts from "./pages/Accounts.jsx"; import Expenses from "./pages/Expenses.jsx"; import Withdrawals from "./pages/Withdrawals.jsx"; import SupplierReport from "./pages/SupplierReport.jsx"; import ProfitLoss from "./pages/ProfitLoss.jsx"; import Stock from "./pages/Stock.jsx"; import Import from "./pages/Import.jsx"; import Backups from "./pages/Backups.jsx"; import Activity from "./pages/Activity.jsx";
+function Gate() {
+  const { user, ready, isOwner } = useAuth();
+  if (!ready) return <Loading />;
+  if (!user) return <Login />;
+  return <Routes><Route element={<Layout />}>
+    <Route index element={<Home />} /><Route path="parties" element={<Parties />} /><Route path="parties/:id" element={<Ledger />} />
+    <Route path="items" element={<Items />} /><Route path="rates" element={<Rates />} /><Route path="payments" element={<Payments />} /><Route path="purchases" element={<Purchases />} /><Route path="more" element={<More />} /><Route path="expenses" element={<Expenses />} /><Route path="withdrawals" element={isOwner ? <Withdrawals /> : <Navigate to="/" />} /><Route path="reports/suppliers" element={<SupplierReport />} /><Route path="stock" element={<Stock />} /><Route path="pl" element={isOwner ? <ProfitLoss /> : <Navigate to="/" />} /><Route path="import" element={isOwner ? <Import /> : <Navigate to="/" />} /><Route path="backups" element={isOwner ? <Backups /> : <Navigate to="/" />} /><Route path="special" element={<Accounts category="special" />} /><Route path="workers" element={<Accounts category="worker" />} /><Route path="invoices" element={<Invoices />} /><Route path="invoices/new" element={<NewInvoice />} /><Route path="invoices/:id" element={<InvoiceView />} /><Route path="settings" element={isOwner ? <Settings /> : <Navigate to="/" />} /><Route path="audit" element={isOwner ? <Activity /> : <Navigate to="/" />} /><Route path="*" element={<Navigate to="/" />} />
+  </Route></Routes>;
+}
+export default () => <AuthProvider><ToastProvider><Gate /></ToastProvider></AuthProvider>;
