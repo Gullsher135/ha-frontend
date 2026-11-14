@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"; import { Link, useParams } from "react-router-dom"; import { ChevronLeft, Download, Share2 } from "lucide-react";
-import { api, apiBlob } from "../api.js"; import { num, rs, fdate } from "../format.js"; import { useAuth } from "../auth.jsx"; import { Modal, Field, Loading, useToast } from "../components/ui.jsx"; import { Badge } from "./Invoices.jsx";
+import { useEffect, useState } from "react"; import { Link, useParams } from "react-router-dom"; import { ChevronLeft, Download, Share2, Pencil } from "lucide-react";
+import { api, apiBlob } from "../api.js"; import { num, rs, fdate, MODES } from "../format.js"; import { useAuth } from "../auth.jsx"; import { Modal, Field, Loading, useToast } from "../components/ui.jsx"; import { Badge } from "./Invoices.jsx";
 const qtyText = (l) => (l.unit === "carton" ? `${num(l.qty)} carton${l.qty === 1 ? "" : "s"}${l.pcs ? ` (${num(l.qty * l.pcs)} pcs)` : ""}` : l.unit === "kg" ? `${num(l.qty)} kg` : `${num(l.qty)} pcs`);
 export default function InvoiceView() {
   const { id } = useParams(); const { isOwner } = useAuth(); const toast = useToast(); const [v, setV] = useState(null); const [st, setSt] = useState(null); const [busy, setBusy] = useState(false);
@@ -21,7 +21,7 @@ export default function InvoiceView() {
   return <>
     <Link to="/invoices" className="back"><ChevronLeft size={18} /> Invoices</Link>
     <header className="pagehead"><div><h1>Invoice #{v.number}</h1><p><Badge s={v.status} /></p></div>
-      <div className="actions"><button className="btn ghost" onClick={download}><Download size={17} /> PDF</button><button className="btn" onClick={share} disabled={busy}><Share2 size={17} /> WhatsApp</button></div></header>
+      <div className="actions">{isOwner && v.status !== "cancelled" && <Link className="btn ghost" to={`/invoices/${id}/edit`}><Pencil size={17} /> Edit</Link>}<button className="btn ghost" onClick={download}><Download size={17} /> PDF</button><button className="btn" onClick={share} disabled={busy}><Share2 size={17} /> WhatsApp</button></div></header>
     {v.status === "pending" && <div className="alert static">Some rates are missing. Nothing is in the ledger yet.{!isOwner && " The owner needs to approve this invoice."}</div>}
     {v.status === "cancelled" && <div className="alert static bad">Cancelled: {v.cancelReason}</div>}
     <article className="paper">
@@ -30,7 +30,7 @@ export default function InvoiceView() {
       <div className="pt"><div className="pr h"><span>Item</span><span>Quantity</span><span className="a">Rate</span><span className="a">Amount</span></div>
         {v.lines.map((l, i) => <div key={i} className="pr"><span>{l.name}</span><span>{qtyText(l)}</span><span className="a">{l.rate == null ? "—" : num(l.rate)}</span><span className="a">{l.amount == null ? <i className="warn">Pending</i> : num(l.amount)}</span></div>)}</div>
       <div className="ptot">{v.status !== "pending" && v.goods != null && <div><span>Goods</span><b>{num(v.goods)}</b></div>}{v.transport > 0 && <div><span>Transport</span><b>{num(v.transport)}</b></div>}
-        {v.total != null && <><div className="big"><span>Invoice total</span><b>{num(v.total)}</b></div><div><span>Old balance</span><b>{bal(v.oldBalance)}</b></div></>}<div><span>Received{v.received > 0 && ` (${v.receivedMode === "easypaisa" ? "Easy Paisa" : v.receivedMode})`}</span><b>{num(v.received)}</b></div>
+        {v.total != null && <><div className="big"><span>Invoice total</span><b>{num(v.total)}</b></div><div><span>Old balance</span><b>{bal(v.oldBalance)}</b></div></>}<div><span>Received{v.received > 0 && ` (${MODES[v.receivedMode] || v.receivedMode})`}</span><b>{num(v.received)}</b></div>
         {v.total != null && <div className="big due"><span>{v.balance < 0 ? "Credit balance" : "Balance due"}</span><b>{rs(Math.abs(v.balance))}</b></div>}</div>
       {v.note && <p className="muted">Note: {v.note}</p>}{st.footer && <p className="pfoot">{st.footer}</p>}
     </article>

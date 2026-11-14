@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react"; import { Link, useParams } from "react-router-dom"; import { ArrowLeftRight, ChevronLeft, Phone, Undo2, BookOpen } from "lucide-react";
+import { useCallback, useEffect, useState } from "react"; import { Link, useParams, useNavigate } from "react-router-dom"; import { ArrowLeftRight, ChevronLeft, Phone, Undo2, BookOpen } from "lucide-react";
 import { api } from "../api.js"; import { num, rs, fdate, tone, todayPK, monthStart, daysAgo, KIND } from "../format.js"; import { useAuth } from "../auth.jsx";
-import { Modal, Field, Loading, Empty, useToast } from "../components/ui.jsx"; import { PartyForm } from "./Parties.jsx"; import { PayForm } from "./Payments.jsx";
+import { Modal, Field, Loading, Empty, useToast } from "../components/ui.jsx"; import { PartyForm, ResignDialog, useAccountActions } from "./Parties.jsx"; import { PayForm } from "./Payments.jsx";
 const REV = ["opening", "transfer_out", "transfer_in", "adjustment", "advance", "installment", "salary_deduction"];
 function Transfer({ party, onClose, onDone }) {
   const toast = useToast(); const [all, setAll] = useState([]); const [f, setF] = useState({ from: party.id, to: "", amount: "", date: todayPK(), note: "" }); const [busy, setBusy] = useState(false);
@@ -38,9 +38,10 @@ function Entry({ party, type, balance, onClose, onDone }) {
 }
 export default function Ledger() {
   const { id } = useParams(); const { isOwner } = useAuth(); const toast = useToast();
-  const [r, setR] = useState({ from: "", to: "" }); const [d, setD] = useState(null); const [dlg, setDlg] = useState(null); const [rev, setRev] = useState(null);
-  const load = useCallback(() => { const qs = new URLSearchParams(Object.entries(r).filter(([, v]) => v)).toString(); api(`/parties/${id}/ledger?${qs}`).then(setD).catch((e) => toast(e.message, "err")); }, [id, r]);
+  const [r, setR] = useState({ from: "", to: "" }); const [d, setD] = useState(null); const [dlg, setDlg] = useState(null); const [rev, setRev] = useState(null); const nav = useNavigate();
+  const load = useCallback(() => { const qs = new URLSearchParams(Object.entries(r).filter(([, v]) => v)).toString(); api(`/parties/${id}/ledger?${qs}`).then(setD).catch((e) => { if (/not found/i.test(e.message)) nav("/parties"); else toast(e.message, "err"); }); }, [id, r]);
   useEffect(() => { setD(null); load(); }, [load]);
+  const acts = useAccountActions(() => load());
   if (!d) return <Loading />;
   const p = d.party, c = d.closing, t = tone(c.direction), hasOpening = d.entries.some((e) => e.kind === "opening" && !e.reversed);
   const done = () => { setDlg(null); load(); };
@@ -49,7 +50,9 @@ export default function Ledger() {
   return <>
     <Link to="/parties" className="back"><ChevronLeft size={18} /> All parties</Link>
     <header className="pagehead"><div><h1>{p.name}</h1><p>{[p.isCustomer && "Customer", p.isSupplier && "Supplier", p.category === "special" && "Special account", p.category === "worker" && "Worker"].filter(Boolean).join(" and ")}{p.phone && <> · <Phone size={13} /> {p.phone}</>}</p></div>
-      <div className="actions"><button className="btn ghost" onClick={() => setDlg("edit")}>Edit details</button>{p.category === "special" && <><button className="btn" onClick={() => setDlg("pay")}>Record payment</button><button className="btn ghost" onClick={() => setDlg("adjustment")}>Add or adjust</button></>}{p.category === "worker" && <><button className="btn" onClick={() => setDlg("pay")}>Give advance</button><button className="btn ghost" onClick={() => setDlg("goods_credit")}>Goods on credit</button><button className="btn ghost" onClick={() => setDlg("salary_deduction")}>Deduct from salary</button></>}<button className="btn ghost" onClick={() => setDlg("transfer")}><ArrowLeftRight size={17} /> Move amount</button>{isOwner && !hasOpening && <button className="btn ghost" onClick={() => setDlg("opening")}><BookOpen size={17} /> Opening balance</button>}</div></header>
+      <div className="actions"><button className="btn ghost" onClick={() => setDlg("edit")}>Edit details</button>{p.category === "worker" && p.active && (p.employment === "resigned" ? <button className="btn ghost" onClick={async () => { try { await api(`/parties/${p.id}/reinstate`, { method: "POST" }); toast("Marked as working again"); load(); } catch (x) { toast(x.message, "err"); } }}>Working again</button> : <button className="btn ghost" onClick={() => setDlg("resign")}>Resign</button>)}{p.category === "special" && <><button className="btn" onClick={() => setDlg("pay")}>Record payment</button><button className="btn ghost" onClick={() => setDlg("adjustment")}>Add or adjust</button></>}{p.category === "worker" && <><button className="btn" onClick={() => setDlg("pay")}>Give advance</button><button className="btn ghost" onClick={() => setDlg("goods_credit")}>Goods on credit</button><button className="btn ghost" onClick={() => setDlg("salary_deduction")}>Deduct from salary</button></>}<button className="btn ghost" onClick={() => setDlg("transfer")}><ArrowLeftRight size={17} /> Move amount</button>{isOwner && p.active && <button className="btn ghost" onClick={() => acts.ask("close", p)}>Close account</button>}{isOwner && !p.active && <button className="btn" onClick={() => acts.reopen(p)}>Reopen account</button>}{isOwner && d.entries.length === 0 && <button className="btn ghost" onClick={() => acts.ask("delete", p)}>Delete</button>}{isOwner && !hasOpening && <button className="btn ghost" onClick={() => setDlg("opening")}><BookOpen size={17} /> Opening balance</button>}</div></header>
+    {!p.active && <div className="alert static">This account is closed. Its history is kept. Reopen it to add new entries.</div>}
+    {p.category === "worker" && p.employment === "resigned" && p.active && <div className="alert static">Resigned on {fdate(p.resignedOn || "1970-01-01")}{p.resignNote && ` (${p.resignNote})`}. {c.direction === "settled" ? "The balance is settled. You can close this account." : "Settle the balance, then close the account."}</div>}
     {p.category !== "trade" && <p className="note">This account is kept out of profit and loss.{p.notes && " " + p.notes}</p>}
     <section className={"stmt " + t}>
       <div><span>{c.direction === "settled" ? "All settled" : c.direction === "party_owes_us" && p.category === "worker" ? "To deduct at salary time" : c.direction === "party_owes_us" ? `${p.name} owes you` : `You owe ${p.name}`}</span><strong>{c.direction === "settled" ? "Rs 0" : rs(c.balance)}</strong>
@@ -68,6 +71,8 @@ export default function Ledger() {
           <div className={"a bl " + (e.balance < 0 ? "owe" : "gain")} data-l="Balance">{num(e.balance)}</div></div>)}</div></>}
     {dlg === "pay" && <PayForm presetParty={p} presetDirection="out" askPaidTo={p.category === "special"} onClose={() => setDlg(null)} onDone={done} />}
     {["adjustment", "goods_credit", "salary_deduction"].includes(dlg) && <Entry party={p} type={dlg} balance={d.closingSigned} onClose={() => setDlg(null)} onDone={done} />}
+    {dlg === "resign" && <ResignDialog party={p} balance={d.closingSigned} onClose={() => setDlg(null)} onDone={done} />}
+    {acts.modal}
     {dlg === "edit" && <PartyForm party={p} onClose={() => setDlg(null)} onDone={done} />}
     {dlg === "transfer" && <Transfer party={p} onClose={() => setDlg(null)} onDone={done} />}
     {dlg === "opening" && <Opening party={p} onClose={() => setDlg(null)} onDone={done} />}
