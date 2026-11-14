@@ -7,7 +7,7 @@ export default function Layout() {
   const groups = [
     ["Daily work", [["/", "Home", LayoutDashboard, true, 1], ["/invoices", "Invoices", FileText, false, 1], ["/payments", "Payments", Wallet, false, 1], ["/expenses", "Expenses", Receipt, false, 1], ["/purchases", "Purchases", Truck], ["/production", "Production", Factory]]],
     ["Accounts", [["/parties", "Parties", Users, false, 1], ["/special", "Special accounts", Landmark], ["/workers", "Workers", HardHat], ["/rates", "Rates", Tag], ["/items", "Items", Package]]],
-    ["Reports", [["/reports/suppliers", "Supplier balances", Scale], ["/stock", "Stock count", Boxes], ...(isOwner ? [["/pl", "Profit & Loss", TrendingUp]] : [])]],
+    ["Reports", [["/reports/suppliers", "Supplier balances", Scale], ["/stock/items", "Stock items", Boxes, true], ["/stock", "Stock count", Boxes, true], ...(isOwner ? [["/pl", "Profit & Loss", TrendingUp]] : [])]],
     ...(isOwner ? [["Owner", [["/withdrawals", "Owner withdrawals", Banknote], ["/import", "Data import", Upload], ["/backups", "Backups", HardDrive], ["/audit", "Activity", ScrollText], ["/settings", "Settings", Cog]]]] : []),
   ];
   const tabs = [...groups.flatMap((g) => g[1]).filter((l) => l[4]).sort((a, b) => ["/", "/invoices", "/parties", "/payments", "/expenses"].indexOf(a[0]) - ["/", "/invoices", "/parties", "/payments", "/expenses"].indexOf(b[0])), ["/more", "More", MoreHorizontal]];

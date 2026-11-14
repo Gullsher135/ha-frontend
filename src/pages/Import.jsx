@@ -32,7 +32,7 @@ function Ledgers() {
   const build = () => body.map((r) => ({ date: cell(r, "date"), details: cell(r, "details"), debit: cell(r, f.swap ? "credit" : "debit"), credit: cell(r, f.swap ? "debit" : "credit"), markCheck: false }));
   const payload = (rs_, ff = f) => ({ party: ff.party, order: ff.order, year: +ff.year || undefined, rows: rs_.map((r) => ({ ...r, date: r.date || "" })),
     ...(Number(ff.oAmt) > 0 && { opening: { amount: Number(ff.oAmt), side: ff.oSide, date: `${ff.year || 2026}-01-01` } }), ...(ff.eAmt !== "" && { expected: { amount: Number(ff.eAmt), side: ff.eSide } }) });
-  const check = async (rs_, ff = f) => { setBusy(true); try { const r = await api("/import/ledger/preview", { method: "POST", body: payload(rs_, ff) });
+  const check = async (rs_, ff = f) => { if (map.debit !== "" && map.debit === map.credit) return toast("Debit and Credit are set to the same column. Choose two different columns.", "err"); if (map.date === "") return toast("Choose which column holds the Date", "err"); setBusy(true); try { const r = await api("/import/ledger/preview", { method: "POST", body: payload(rs_, ff) });
     setRows(rs_.map((x, i) => ({ ...x, date: r.rows[i]?.date || x.date }))); setRes(r); setDirty(false); } catch (x) { toast(x.message + (x.details ? ": " + x.details.join(", ") : ""), "err"); } setBusy(false); };
   // One-tap fixes offered by the checker when the total does not match
   const flip = (v) => (v === "owes_us" ? "we_owe" : "owes_us");
@@ -63,6 +63,7 @@ function Ledgers() {
     {res && rows && <>
       <section className={"stmt " + (res.canCommit && !dirty ? "gain" : "owe")}><div><span>{res.canCommit && !dirty ? "Matches your Excel sheet" : "Not ready yet"}</span><strong>{res.difference === 0 ? "Difference: Rs 0" : "Difference: " + rs(Math.abs(res.difference))}</strong>
         <small>Ledger adds up to {money(res.closing)}. Your Excel closing: {money(res.expected)}.</small></div></section>
+      {res.warnings?.length > 0 && <div className="note" style={{ marginBottom: 10 }}><b>Please look at this (it does not stop the import):</b><ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{res.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>}
       {res.blockers.length > 0 && <div className="alert static bad"><ul style={{ margin: 0, paddingLeft: 18 }}>{res.blockers.map((b) => <li key={b}>{b}</li>)}</ul></div>}
       {res.blockers.length > 0 && <div className="hintbox"><h4>How to fix this</h4><ul>
         {res.existing?.count > 0 && <li><b>This account already has {res.existing.count} ledger entr{res.existing.count === 1 ? "y" : "ies"}</b> ({[res.existing.imported && `${res.existing.imported} from an earlier import`, res.existing.manual && `${res.existing.manual} added by hand`, res.existing.linked && `${res.existing.linked} from invoices, payments or purchases`].filter(Boolean).join(", ")}). An import can only go into an empty account. {res.existing.linked > 0 ? "Entries made by invoices, payments or purchases cannot be cleared here. Choose a different account, or ask for a correction entry instead." : <>If those entries are not needed, clear them and import again. <button className="btn danger sm" disabled={busy} onClick={() => setClr(true)}>Clear this account's entries</button></>}</li>}
