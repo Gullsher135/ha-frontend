@@ -38,7 +38,7 @@ export function useAccountActions(reload) {
   const reopen = (p) => run(() => api("/parties/" + p.id, { method: "PATCH", body: { active: true } }), "Account reopened");
   const del = (p) => run(() => api("/parties/" + p.id, { method: "DELETE" }), "Account deleted");
   const modal = dlg && <Modal title={dlg.kind === "delete" ? `Delete ${dlg.p.name}?` : `Close ${dlg.p.name}?`} onClose={() => setDlg(null)}>
-    {dlg.kind === "delete" ? <p>This removes the account for good. It only works for an account that was added by mistake and has no ledger history. If it has history, the system will refuse and you can close it instead.</p>
+    {dlg.kind === "delete" ? <p>This removes the account for good. It only works for an account that was added by mistake and has no ledger history. If it has history, the system will refuse and you can close it instead. If the history came from a wrong Excel import (before go-live), clear it first under Data import, then delete the account.</p>
       : <p>A closed account disappears from the lists and cannot get new entries, but its history stays safe and you can reopen it any time. The balance must be zero (settled) before you can close it.</p>}
     <footer><button className="btn ghost" onClick={() => setDlg(null)}>Keep it</button><button className="btn danger" disabled={busy} onClick={() => (dlg.kind === "delete" ? del(dlg.p) : close(dlg.p))}>{dlg.kind === "delete" ? "Delete account" : "Close account"}</button></footer></Modal>;
   return { ask: (kind, p) => setDlg({ kind, p }), reopen, modal, busy };
