@@ -61,7 +61,7 @@ function Ledgers() {
       <button className="btn" disabled={busy || !f.party || !body.length || map.date === "" || (map.debit === "" && map.credit === "")} onClick={() => check(rows && !dirty ? rows : rows && dirty ? rows : build())}>{rows ? "Check again" : "Check this ledger"}</button>
       {rows && <button className="btn ghost" style={{ marginLeft: 8 }} disabled={busy} onClick={() => check(build())}>Start over from the pasted text</button>}</div>}
     {res && rows && <>
-      <section className={"stmt " + (res.canCommit && !dirty ? "gain" : "owe")}><div><span>{res.canCommit && !dirty ? "Matches your Excel sheet" : "Not ready yet"}</span><strong>{res.difference === 0 ? "Difference: Rs 0" : "Difference: " + rs(Math.abs(res.difference))}</strong>
+      <section className={"stmt " + (res.canCommit && !dirty ? "gain" : "owe")}><div><span>{res.canCommit && !dirty ? "Matches your Excel sheet" : res.difference === 0 && res.blockers.length ? "Totals match, but one thing stops the import" : "Not ready yet"}</span><strong>{res.difference === 0 ? "Difference: Rs 0" : "Difference: " + rs(Math.abs(res.difference))}</strong>
         <small>Ledger adds up to {money(res.closing)}. Your Excel closing: {money(res.expected)}.</small></div></section>
       {res.warnings?.length > 0 && <div className="note" style={{ marginBottom: 10 }}><b>Please look at this (it does not stop the import):</b><ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{res.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>}
       {res.blockers.length > 0 && <div className="alert static bad"><ul style={{ margin: 0, paddingLeft: 18 }}>{res.blockers.map((b) => <li key={b}>{b}</li>)}</ul></div>}
