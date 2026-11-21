@@ -44,7 +44,7 @@ function Ledgers() {
   const edit = (i, p) => { setRows(rows.map((r, j) => (j === i ? { ...r, ...p } : r))); setDirty(true); };
   const commit = async () => { setBusy(true); try { const r = await api("/import/ledger/commit", { method: "POST", body: payload(rows) }); toast(`${r.party}: ${r.entries} entries imported${r.flagged ? `, ${r.flagged} marked for the owner to check` : ""}`); setText(""); setRows(null); setRes(null); setF({ ...f, party: "", oAmt: "", eAmt: "" }); loadB(); }
     catch (x) { toast(x.message + (x.details ? ": " + x.details.join(" · ") : ""), "err"); } setBusy(false); };
-  const remove = async () => { try { await api(`/import/batches/${rm.id}/remove`, { method: "POST" }); toast("Import removed. You can load it again."); setRm(null); loadB(); } catch (x) { toast(x.message, "err"); setRm(null); } };
+  const remove = async () => { try { const r = await api(`/import/batches/${rm.id}/remove`, { method: "POST" }); toast(r.kept ? `Import removed. The ${r.kept} other entr${r.kept === 1 ? "y" : "ies"} of this account were kept.` : "Import removed. You can load it again."); setRm(null); loadB(); } catch (x) { toast(x.message, "err"); setRm(null); } };
   const sel = (k) => <select value={map[k]} onChange={(e) => { setMap({ ...map, [k]: e.target.value }); setDirty(true); }}><option value="">(none)</option>{head.map((h, i) => <option key={i} value={i}>{h || "Column " + (i + 1)}</option>)}</select>;
   const money = (m) => (m.text === "settled" ? "Rs 0" : `${rs(m.rupees)} (${m.text})`);
   return <>
@@ -80,7 +80,7 @@ function Ledgers() {
       <button className="btn big" style={{ marginTop: 14 }} disabled={busy || dirty || !res.canCommit} onClick={commit}>Import {res.entries} entries</button></>}
     {batches.length > 0 && <><h3 style={{ margin: "26px 0 10px" }}>Ledgers imported so far ({batches.length})</h3><ul className="plist">{batches.map((b) => <li key={b.id}><div className="rowflex"><div><b>{b.party}</b><small>{b.entries} entries{b.flagged ? ` · ${b.flagged} to check` : ""} · {fdate(b.at.slice(0, 10))}</small></div><button className="btn ghost sm" onClick={() => setRm(b)}>Remove</button></div></li>)}</ul></>}
     {clr && <Modal title="Clear this account's ledger?" onClose={() => setClr(false)}><p>All {res?.existing?.count} entries of this account are deleted so you can import it again. This is only possible before go-live. The change is recorded in the activity log.</p><footer><button className="btn ghost" onClick={() => setClr(false)}>Keep them</button><button className="btn danger" disabled={busy} onClick={clearAccount}>Clear entries</button></footer></Modal>}
-    {rm && <Modal title={`Remove the import of ${rm.party}?`} onClose={() => setRm(null)}><p>Its {rm.entries} entries are deleted so you can load the ledger again. This is only possible before go-live.</p><footer><button className="btn ghost" onClick={() => setRm(null)}>Keep it</button><button className="btn danger" onClick={remove}>Remove import</button></footer></Modal>}
+    {rm && <Modal title={`Remove the import of ${rm.party}?`} onClose={() => setRm(null)}><p>Only the {rm.entries} lines of this import are deleted. Anything else in the account (typed by hand, or from invoices and payments) stays. This is only possible before go-live.</p><footer><button className="btn ghost" onClick={() => setRm(null)}>Keep it</button><button className="btn danger" onClick={remove}>Remove import</button></footer></Modal>}
   </>;
 }
 /* ---------------- 3. owner review ---------------- */
